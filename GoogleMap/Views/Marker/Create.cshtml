@@ -1,0 +1,436 @@
+﻿@{
+    Layout = "~/Views/Shared/_FullScreenLayout.cshtml";
+    ViewBag.Title = "Google Map";
+}
+
+<style type="text/css">
+    .k-button {
+        font-weight: bold;
+    }
+
+    #autocomplete-marker .k-autocomplete, #autocomplete-marker .k-animation-container, #autocomplete-marker .k-popup {
+        width: 300px;
+    }
+</style>
+
+<div id="topBanner" class="top-banner">
+    @Html.Partial("SearchControl")
+</div>
+<div id="mainContainer">
+    <div id="leftmenu" style="float: left; border-right: 1px solid gray; background-color: #FFF; color: #000; width: 180px;">
+        <table border="0" width="100%">
+            <tr>
+                <td>Danh mục:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    @Html.DropDownList("ddlEditCategory", new SelectList(ViewBag.Categories, "Id", "Name"))
+                    @Html.DropDownList("ddlEditSubCategory", new SelectList(ViewBag.SubCategories, "Id", "Name"))
+                </td>
+            </tr>
+            <tr>
+                <td>Vĩ độ:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtLatitude" name="txtLatitude" />
+                </td>
+            </tr>
+            <tr>
+                <td>Kinh độ:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtLongitude" name="txtLongitude" />
+                </td>
+            </tr>
+            <tr>
+                <td>Tên địa điểm:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtLocationName" name="txtLocationName" />
+                </td>
+            </tr>
+            <tr>
+                <td>Địa chỉ:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtAddress" name="txtAddress" />
+                </td>
+            </tr>
+            <tr>
+                <td>Điện thoại:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtPhone" name="txtPhone" />
+                </td>
+            </tr>
+            <tr>
+                <td>Website:
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="txtWebsite" name="txtWebsite" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="button" id="btnSave" name="btnSave" value="Lưu thông tin" />
+                    <br/>
+                    [ @Html.ActionLink("Quay lại trang chủ", "Index", "Home") ]
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div id="map_canvas" style="float: left; width: 600px; height: 600px">
+    </div>
+</div>
+@if (false)
+{
+    <script src="../../Scripts/jquery-1.8.2.intellisense.js" type="text/javascript"></script>
+}
+<script type="text/javascript">
+    var markers = [];
+    var currentMarker;
+    // Google Map object.
+    var map;
+
+    // Create InfoWindow object
+    var infowindow = new google.maps.InfoWindow(
+        {
+            content: "",
+            size: new google.maps.Size(50, 50)
+        });
+
+    function initialize() {
+        var myOptions = {
+            zoom: 16,
+            mapTypeId: window.google.maps.MapTypeId.ROADMAP
+        };
+
+        map = new window.google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+
+        //        // Try HTML5 geolocation
+        //        // Xác định vị trí hiện tại của Browser
+        //        if (navigator.geolocation) {
+        //            navigator.geolocation.getCurrentPosition(function (position) {
+        //                var pos = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+
+        //                var marker = new google.maps.Marker({
+        //                    position: pos,
+        //                    map: map
+        //                });
+
+        //                infowindow.setContent("Bạn đang ở đây!");
+        //                infowindow.open(map, marker);
+
+        //                map.setCenter(pos);
+
+        //            }, function () {
+        //                handleNoGeolocation(true);
+        //            });
+        //        } else {
+        //            // Browser doesn"t support Geolocation
+        //            handleNoGeolocation(false);
+        //        }
+
+        //        var content = "";
+        //        function handleNoGeolocation(errorFlag) {
+        //            if (errorFlag) {
+        //                content = "Error: The Geolocation service failed.";
+        //            } else {
+        //                content = "Error: Your browser doesn\"t support geolocation.";
+        //            }
+
+        //            var options = {
+        //                map: map,
+        //                position: new google.maps.LatLng(60, 105),
+        //                content: content
+        //            };
+
+        //            //var infowindow = new google.maps.InfoWindow(options);
+        //            map.setCenter(options.position);
+        //        }
+
+
+        // Mặc định là trung tâm thành phố Đà Nẵng
+        var mypos = new window.google.maps.LatLng(16.056752403219743, 108.23274833874507);
+        map.setCenter(mypos);
+
+
+        // Add events.
+        window.google.maps.event.addListener(map, "click", function (event) {
+            placeMarker(event.latLng);
+        });
+
+        //map.setCenter(16.07512921975845, 108.22283633868415);
+
+        // Load markers.
+        // Nạp  các marker lên map
+        var now = new Date();
+        // Alway refesh page (Avoid page cached).
+        $.getJSON("@Url.Content("~/")" + "Home/GetAllMarkers/?time=" + now.getTime(), null, function (data) {
+            $.each(data, function (index, item) {
+
+                var image = new window.google.maps.MarkerImage(
+                                "@Url.Content("~/")" + "images/icons/default.png",
+                                new window.google.maps.Size(32, 37),
+                                new window.google.maps.Point(0, 0),
+                                new window.google.maps.Point(16, 37)
+                                );
+
+
+                var shadow = new window.google.maps.MarkerImage(
+                                "@Url.Content("~/")" + "images/icons/shadow.png",
+                                new window.google.maps.Size(54, 37),
+                                new window.google.maps.Point(0, 0),
+                                new window.google.maps.Point(16, 37)
+                                );
+
+
+                if (item.SubCategoryIconType != "Default") {
+                    image.url = "@Url.Content("~/")" + "images/icons/" + item.CategoryIconType + "/" + item.SubCategoryIconType + ".png";
+                } else {
+                    image = null;
+                    shadow = null;
+                }
+
+                var latlng = new window.google.maps.LatLng(item.Latitude, item.Longitude);
+                var marker = new window.google.maps.Marker({
+                    position: latlng,
+                    map: map,
+                    icon: image,
+                    shadow: shadow,
+                    draggable: true,
+                    title: item.Id
+                });
+
+                // Add click event.
+                window.google.maps.event.addListener(marker, "click", function (event) {
+                    infowindow.setContent(item.Name);
+                    infowindow.open(map, marker);
+                });
+
+
+                // Add dragstart event.
+                window.google.maps.event.addListener(marker, "dragstart", function (event) {
+                    //infowindow.open(map, marker);
+                    this.currentMarker = marker;
+                });
+
+                // Add dragend event.
+                window.google.maps.event.addListener(marker, "dragend", function (event) {
+                    var newLocation = marker.getPosition();
+                    // Display infomation on left menu.
+                    $("#txtLatitude").val(newLocation.lat());
+                    $("#txtLongitude").val(newLocation.lng());
+
+                    $.ajax({
+                        url: "@Url.Content("~/")" + "Home/UpdateMarker",
+                        type: "POST",
+                        data: { markerId: marker.getTitle(), latitude: newLocation.lat(), longitude: newLocation.lng() },
+                        success: function (returnData) {
+                            alert(returnData.Message);
+                        }
+                    });
+
+                });
+
+                markers.push(marker);
+            });
+        });
+    }
+
+    // Create a marker
+    function placeMarker(location) {
+
+        var marker = new google.maps.Marker({
+            position: location,
+            map: map,
+            draggable: true
+        });
+
+        // Display infomation on left menu.
+        $("#txtLatitude").val(location.lat());
+        $("#txtLongitude").val(location.lng());
+
+        this.currentMarker = marker;
+
+        // Add click event.
+        google.maps.event.addListener(marker, "click", function (event) {
+            infowindow.open(map, marker);
+        });
+
+        // Add dragstart event.
+        window.google.maps.event.addListener(marker, "dragstart", function (event) {
+            //infowindow.open(map, marker);
+
+        });
+
+        // Add dragend event.
+        window.google.maps.event.addListener(marker, "dragend", function (event) {
+            var newLocation = marker.getPosition();
+            // Display infomation on left menu.
+            $("#txtLatitude").val(newLocation.lat());
+            $("#txtLongitude").val(newLocation.lng());
+        });
+    }
+
+    google.maps.event.addDomListener(window, "load", initialize);
+</script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var h = $(window).height();
+        var mapDiv = $("#map_canvas");
+        var leftmenuDiv = $("#leftmenu");
+
+        $("#mainContainer").splitter("resize", 100);
+
+        leftmenuDiv.css("width", "180px");
+        mapDiv.css("left", "180px");
+
+        $("#mainContainer").css("height", (h - 60) + "px");
+        $("#mainContainer").trigger("resize");
+
+    });
+
+    // Save button
+    $("#btnSave").click(function () {
+        // Save data to database.
+        var subcategory = $("#ddlEditSubCategory").val();
+        var name = $("#txtLocationName").val();
+        var lat = $("#txtLatitude").val();
+        var lng = $("#txtLongitude").val();
+        var address = $("#txtAddress").val();
+        var phone = $("#txtPhone").val();
+        var website = $("#txtWebsite").val();
+
+        $.ajax({
+            url: "@Url.Content("~/")" + "Home/CreateMarker",
+            type: "POST",
+            data: { name: name, subCategoryId: subcategory, latitude: lat, longitude: lng, address: address, phone: phone, website: website },
+            success: function (data) {
+                alert(data.Message);
+                // Xóa trắng tên
+                $("#txtLocationName").val("");
+                $("#txtLongitude").val("");
+                $("#txtLatitude").val("");
+                $("#txtAddress").val("");
+
+            }
+        });
+    });
+
+    function getMarker(id) {
+        for (var i = 0; i < markers.length; i++) {
+            if (markers[i].getTitle().toString() == id.toString()) {
+                return markers[i];
+            }
+        }
+        return null;
+    }
+
+    $("#btnView").click(function () {
+        window.location.href = "@Url.Content("~/")" + "Home";
+
+    });
+
+    // Button Terran.
+    $("#btnSetMapTerrain").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+    });
+
+    $("#btnSetMapRoadmap").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+    });
+
+    $("#btnSetMapSatellite").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+    });
+
+    $("#btnSetMapHybrid").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.HYBRID);
+    });
+
+    $("#btnAdmin").click(function () {
+        window.location.href = "@Url.Content("~/Category")";
+
+    });
+
+    function gotoMarker(markerId) {
+        var guid = markerId;
+        $.ajax({
+            url: "@Url.Content("~/")" + "Home/GetMarker",
+            type: "POST",
+            data: { markerId: guid },
+            success: function (data) {
+                var pos = new google.maps.LatLng(data.latitude, data.longitude);
+
+                var marker = getMarker(guid);
+
+                var displayContent = "<div class='title'>" + data.name + "</div>";
+                displayContent += "<div>ĐỊA CHỈ: " + "" + "</div>";
+                displayContent += "<div>ĐIỆN THOẠI: " + "" + "</div>";
+                displayContent += "<div>WEBSITE: " + "" + "</div>";
+
+                var getPictureUrl = "@Url.Content("~/")" + "Home/GetPictures?markerId=" + markerId;
+                $.getJSON(getPictureUrl, null, function (pdata) {
+                    $.each(pdata, function (pindex, pitem) {
+                        displayContent += "<a rel='" + markerId + "' class='various fancybox.image' title='" + pitem.Text + "' href='" + "@Url.Content("~/")" + pitem.Url + "'><img src='" + "@Url.Content("~/")" + pitem.Url + "' style='margin:2px; height: 48px; width:48px' /></a>";
+                    });
+
+                    displayContent += "<div><a class='various fancybox.iframe' href='@Url.Action("CreateMarkerComment", "Home")?markerID=" + markerId + "'>Comment</a> <a id='btnCreateMarkerLike' href='#' onclick='CreateMarkerLike(\"" + markerId + "\"); return false'>Like</a></div>";
+                    infowindow.setContent(displayContent);
+                    infowindow.open(map, marker);
+                });
+
+                infowindow.setContent(displayContent);
+                infowindow.open(map, marker);
+                // Go to
+                map.setCenter(pos);
+            }
+        });
+    }
+
+    function getSubCategoryId() {
+        return {
+            SubCategoryId: $("#ddlSubCategory").val()
+        };
+    }
+
+    function getSearchValue() {
+        return {
+            SearchValue: $("#txtKendo").val()
+        };
+    }
+
+    // DropDownList Categories.
+    $("#ddlEditCategory").change(function () {
+        // clear.
+        $('#ddlEditSubCategory > option').remove();
+
+        var guid = $(this).val();
+
+        $('#ddlEditSubCategory').append(new Option("[Chọn danh mục]", '@Guid.NewGuid()'));
+
+        $.getJSON("@Url.Content("~/")" + "Home/GetSubCategories/?CategoryId=" + guid, null, function (data) {
+            $.each(data, function (index, item) {
+                $('#ddlEditSubCategory').append(new Option(item.Text, item.Value));
+            });
+        });
+    });
+
+
+</script>

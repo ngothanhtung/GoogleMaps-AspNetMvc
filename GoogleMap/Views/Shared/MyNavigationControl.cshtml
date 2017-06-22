@@ -1,0 +1,30 @@
+﻿@using GoogleMap.Models
+@using Kendo.Mvc.UI
+
+@{
+    ViewBag.MyMarkers = new GoogleMapEntities().Markers.Where(x => x.CreatedBy == User.Identity.Name).OrderBy(x => x.Name).ToList();
+}
+<div style="height: 200px; overflow-y: scroll">
+    <ul id="panelbar">
+        <li class="k-state-active" style="font-weight: bold; text-transform: uppercase">Địa điểm của tôi
+            <ul>
+                @foreach (Marker marker in ViewBag.MyMarkers)
+                {
+                    <li onclick="gotoMarker('@marker.Id');" style="font-weight: normal">
+                        @marker.Name
+                    </li>
+                }
+            </ul>
+        </li>
+    </ul>
+</div>
+<div style="padding: 6px;">
+    [ @Html.ActionLink("Đăng ký địa điểm", "Create", "Marker") ]
+</div>
+<script>
+    $(document).ready(function () {
+        $("#panelbar").kendoPanelBar({
+            expandMode: "single"
+        });
+    });
+</script>

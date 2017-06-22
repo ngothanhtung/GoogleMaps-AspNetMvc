@@ -1,0 +1,82 @@
+﻿@using Kendo.Mvc.UI
+<table cellpadding="0" cellspacing="0" border="0">
+    <tr style="vertical-align: top">
+        <td style="font-weight: bold; width: 1%; white-space: nowrap">CHỌN ĐỊA ĐIỂM:
+        </td>
+        <td style="width: 1%; white-space: nowrap;">
+            @Html.Kendo().DropDownList().Name("ddlCategory").DataValueField("Value").DataTextField("Text").DataSource(source => source.Read(read => read.Action("GetCategories", "Home").Type(HttpVerbs.Get)).ServerFiltering(true))
+            @Html.Kendo().DropDownList().Name("ddlSubCategory").DataValueField("Value").DataTextField("Text").CascadeFrom("ddlCategory").DataSource(source => source.Read(read => read.Action("GetSubCategories", "Home").Data("getCategoryId").Type(HttpVerbs.Get)).ServerFiltering(true))
+            @Html.Kendo().DropDownList().Name("ddlMarker").DataValueField("Value").DataTextField("Text").CascadeFrom("ddlSubCategory").DataSource(source => source.Read(read => read.Action("GetMarkers", "Home").Data("getSubCategoryId").Type(HttpVerbs.Get)).ServerFiltering(true))
+            <input id="btnGoToMarker" name="btnGoToMarker" value="Xem" type="button" class="k-button" style="width: 75px" />
+
+        </td>
+        <td style="white-space: nowrap">
+            <div style="display: block">
+                <span>THÀNH PHỐ:
+                    [ <a style="color: #0E4380" href="@Url.Content("~/")/Home/Index">Đà Nẵng</a> ]
+                    [ <a style="color: #0E4380" href="@Url.Content("~/")/Home/Index?city=hanoi">Hà Nội</a> ]
+                    [ <a style="color: #0E4380" href="@Url.Content("~/")/Home/Index?city=hcm">Hồ Chí Minh</a> ]
+                </span>
+            </div>
+        </td>
+        <td>
+            <div style="display: block; white-space: nowrap; text-align: right">
+                <input id="btnSetMapTerrain" name="btnSetMapTerrain" class="k-button" value="Địa hình" type="button" />
+                <input id="btnSetMapRoadmap" name="btnSetMapRoadmap" class="k-button" value="Đường đi" type="button" />
+                <input id="btnSetMapSatellite" name="btnSetMapSatellite" class="k-button" value="Vệ tinh" type="button" />
+                <input id="btnSetMapHybrid" name="btnSetMapHybrid" class="k-button" value="Kết hợp" type="button" />
+                @*<input id="btnAdmin" name="btnAdmin" value="Quản trị dữ liệu" class="k-button" type="button" />*@
+            </div>
+        </td>
+    </tr>
+    <tr style="vertical-align: top">
+        <td style="font-weight: bold; width: 1%; white-space: nowrap">TÌM KIẾM:
+        </td>
+        <td colspan="2" style="white-space: nowrap">
+            <div style="float: left" id="autocomplete-marker">
+                @(Html.Kendo().AutoComplete()
+                    .Name("txtKendo")
+                    .Events(x => x.Select("txtKendo_onselect"))
+                    .DataTextField("label")
+                    .Filter("contains").HighlightFirst(true)
+                    .DataSource(source => source.Read(x => x.Action("SearchMarker", "Home").Data("getSearchValue")).ServerFiltering(true))
+                )
+            </div>
+            <div style="float: left; margin-left: 20px;">
+                <b>Từ: </b>
+                <input id="txtStartMarker" class="k-textbox" type="text" name="txtStartMarker" />
+                <b>Đến: </b>
+                <input id="txtEndMarker" class="k-textbox" type="text" name="txtEndMarker" />
+                <input type="button" value="Tìm đường" class="k-button" id="btnSearchDirection" onclick="calcRoute()" />
+                <input id="latlng" style="display: none" class="k-button" type="text" value="16.056752403219743,108.23274833874507" />
+                <input type="button" value="Làm lại" class="k-button" onclick="resetSearchDirection()" />
+            </div>
+        </td>
+
+        <td class="loginlink">
+            <div style="display: block; text-align: right">
+                @Html.Partial("_LogOnPartial")
+            </div>
+        </td>
+    </tr>
+</table>
+<script type="text/javascript">
+    function txtKendo_onselect(e) {
+        var dataItem = this.dataItem(e.item.index());
+        var guid = dataItem.value;
+        gotoMarker(guid);
+    }
+
+    // Button GoToMarker.
+    $("#btnGoToMarker").click(function () {
+        var dropdownlist = $("#ddlMarker").data("kendoDropDownList");
+        var guid = dropdownlist.value();
+        gotoMarker(guid);
+    });
+
+    function getCategoryId() {
+        return {
+            CategoryId: $("#ddlCategory").val()
+        };
+    }
+</script>

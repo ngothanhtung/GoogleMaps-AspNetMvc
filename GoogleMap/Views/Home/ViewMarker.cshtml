@@ -1,0 +1,32 @@
+﻿@model GoogleMap.Models.Marker
+@{
+    Layout = "~/Views/Shared/_FullScreenLayout.cshtml";
+    ViewBag.Title = "ViewPicture";
+}
+<div>
+    <img src='@(Url.Content("~/") + this.Model.ImageUrl)' style='margin: 0px;' alt=""/>
+</div>
+<div>
+    <input type="text" id="txtCommentText" name="txtCommentText" />
+    <input type="button" id="btnSave" name="btnSave" value="Lưu" />
+</div>
+<script type="text/javascript">
+
+    // Save button
+    $("#btnSave").click(function () {
+        // Save data to database.
+        var commentText = $("#txtCommentText").val();
+
+        $.ajax({
+            url: @Url.Content("~/") + "Home/CreateMarkerComment",
+            type: "POST",
+            data: { markerId: "@Request.QueryString["markerId"]", commentText: commentText },
+            success: function (data) {
+                alert(data.Message);
+
+                // Xóa trắng
+                $("#txtCommentText").val("");
+            }
+        });
+    });
+</script>

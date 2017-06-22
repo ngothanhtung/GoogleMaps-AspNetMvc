@@ -1,0 +1,104 @@
+﻿@using GoogleMap.Models
+@model GoogleMap.Models.Marker
+@{
+    Layout = "~/Views/Shared/_FullScreenLayout.cshtml";
+    ViewBag.Title = "ViewPicture";
+}
+
+<style media="all" type="text/css">
+    /*.jcarousel-skin-tango .jcarousel-container-horizontal {
+        width: 88%;
+    }
+
+    .jcarousel-skin-tango .jcarousel-clip-horizontal {
+        width: 100%;
+    }*/
+
+    #galleria{ width: 780px; height: 400px; background: #FFF }
+</style>
+
+<div style="padding: 6px;">
+    <h1>
+        @this.Model.Name
+    </h1>
+    <address>@this.Model.Address</address>
+    <p></p>
+    @if (ViewBag.Pictures.Count > 0)
+    {
+        <div id="galleria">
+            @foreach (Picture picture in ViewBag.Pictures)
+            {
+                <img alt="" src="@Url.Content("~/" + picture.ImageUrl)" />
+            }
+
+        </div>
+    }
+    @*<p></p>
+    <ul id="mycarousel" class="jcarousel-skin-tango">
+        @foreach (Picture picture in ViewBag.Pictures)
+        {
+            <li>
+                <img alt="" src="@Url.Content("~/" + picture.ImageUrl)" width="100" height="75" /></li>
+        }
+    </ul>
+    <p></p>*@
+    <p></p>
+    <div style="font-weight: bold">
+        Ý kiến của bạn:
+    </div>
+
+    <div>
+        <input type="text" style="width: 300px;" id="txtCommentText" name="txtCommentText" />
+        <input type="button" id="btnSave" name="btnSave" value="Post" />
+    </div>
+
+    <p></p>
+
+    <div style="background: #F1F2F6; color: black;">
+        <div id="commentList">
+            @foreach (MarkerComment comment in this.ViewBag.Comments)
+            {
+                <div style="padding: 6px; padding-bottom: 20px; border-bottom: 1px solid #FFFFFF">
+                    <div style="float: left; font-weight: bold">@comment.UserName</div>
+                    <div style="float: left; margin-left: 6px;">@comment.CommentText</div>
+                    <br />
+                    <div>@comment.CreatedDate.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    jQuery(document).ready(function () {
+        //jQuery('#mycarousel').jcarousel({
+        //    visible: 6,
+        //    scroll: 3,
+        //    auto: 2, // seconds
+        //    wrap: 'circular', // xoay vong tron
+
+        //});
+        
+        Galleria.loadTheme('@Url.Content("~/Content/galleria.themes/classic/galleria.classic.js")');
+        Galleria.run('#galleria', {
+            transition: 'fade',
+        });        
+    });
+
+    
+
+    // Save button
+    $("#btnSave").click(function () {
+        // Save data to database.
+        var commentText = $("#txtCommentText").val();
+
+        $.ajax({
+            url: "@Url.Content("~/")" + "Home/CreateMarkerComment",
+            type: "POST",
+            data: { markerId: "@Request.QueryString["markerId"]", commentText: commentText },
+            success: function (data) {
+                // reload page
+                window.location.reload(true);
+            }
+        });
+    });
+</script>

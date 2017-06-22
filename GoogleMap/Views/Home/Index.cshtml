@@ -1,0 +1,561 @@
+﻿@using GoogleMap.Models
+@using Kendo.Mvc.UI
+@{
+    Layout = "~/Views/Shared/_FullScreenLayout.cshtml";
+    ViewBag.Title = "Google Map";
+}
+<style type="text/css">
+    .k-button {
+        font-weight: bold;
+    }
+
+    #autocomplete-marker .k-autocomplete, #autocomplete-marker .k-animation-container, #autocomplete-marker .k-popup {
+        width: 300px;
+    }
+</style>
+
+<div id="topBanner" class="top-banner">
+    @Html.Partial("SearchControl")
+</div>
+<div id="mainContainer">
+    <div id="leftmenu">
+        @Html.Partial("NavigationControl")
+        <div style="padding-top: 10px;"></div>
+        @if (Request.IsAuthenticated)
+        {
+            @Html.Partial("MyNavigationControl")
+        }
+    </div>
+    <div id="map_canvas" style="float: left; width: 600px; height: 600px">
+    </div>
+</div>
+@if (false)
+{
+    <script src="../../Scripts/jquery-1.8.2.intellisense.js" type="text/javascript"></script>
+}
+<script type="text/javascript">
+    // fancybox
+    $(".various").fancybox({
+        maxWidth: 800,
+        maxHeight: 600,
+        fitToView: false,
+        width: '70%',
+        height: '70%',
+        autoSize: false,
+        closeClick: false,
+        openEffect: 'elastic',
+        closeEffect: 'elastic',
+        modal: false,
+        helpers: {
+            thumbs: {
+                width: 120,
+                height: 90
+            },
+            title: { type: 'inside' }
+        },
+        overlay: {
+            showEarly: false
+        }
+    });
+
+            @* // highslide
+    window.hs.graphicsDir = "@Url.Content("~/")" + '/images/highslide/graphics/';
+
+    hs.wrapperClassName = 'wide-border';
+    window.hs.showCredits = false;
+    window.hs.lang = {
+        closeText: 'CLOSE',
+        moveText: ''
+    };
+    window.hs.onDimmerClick = function () {
+        return true;
+    };
+
+
+    // Optional: a crossfade transition looks good with the slideshow
+    hs.transitions = ['expand', 'crossfade'];
+    *@
+
+    // direction
+    var directionDisplay;
+    var directionsService = new google.maps.DirectionsService();
+
+    var geocoder;
+
+    // init
+    var markers = [];
+    var currentMarker;
+    // Google Map object.
+    var map;
+
+    // Create InfoWindow object
+    var infowindow = new google.maps.InfoWindow({
+        content: "",
+        size: new google.maps.Size(50, 50)
+    });
+
+    google.maps.event.addDomListener(window, "load", initialize);
+
+    function gotoMarker(markerId) {
+        var guid = markerId;
+        $.ajax({
+            url: "@Url.Content("~/")" + "Home/GetMarker",
+            type: "POST",
+            data: { markerId: guid },
+            success: function (data) {
+                var pos = new google.maps.LatLng(data.latitude, data.longitude);
+
+                var marker = getMarker(guid);
+
+                var displayContent = "<div class='title'>" + data.name + "</div>";
+                displayContent += "<div>ĐỊA CHỈ: " + "" + "</div>";
+                displayContent += "<div>ĐIỆN THOẠI: " + "" + "</div>";
+                displayContent += "<div>WEBSITE: " + "" + "</div>";
+
+                var getPictureUrl = "@Url.Content("~/")" + "Home/GetPictures?markerId=" + markerId;
+                $.getJSON(getPictureUrl, null, function (pdata) {
+                    $.each(pdata, function (pindex, pitem) {
+                        displayContent += "<a rel='" + markerId + "' class='various fancybox.image' title='" + pitem.Text + "' href='" + "@Url.Content("~/")" + pitem.Url + "'><img src='" + "@Url.Content("~/")" + pitem.Url + "' style='margin:2px; height: 48px; width:48px' /></a>";
+                    });
+
+                    displayContent += "<div><a class='various fancybox.iframe' href='@Url.Action("CreateMarkerComment", "Home")?markerID=" + markerId + "'>Comment</a> <a id='btnCreateMarkerLike' href='#' onclick='CreateMarkerLike(\"" + markerId + "\"); return false'>Like</a></div>";
+                    infowindow.setContent(displayContent);
+                    infowindow.open(map, marker);
+                });
+
+                infowindow.setContent(displayContent);
+                infowindow.open(map, marker);
+                // Go to
+                map.setCenter(pos);
+            }
+        });
+    }
+
+    function resetSearchDirection() {
+        $("#txtStartMarker").val("");
+        $("#txtEndMarker").val("");
+    }
+
+    // Tìm place = LatLng
+    function codeLatLng() {
+        if (currentMarker != null) {
+            currentMarker.setMap(null);
+        }
+
+        var input = document.getElementById("latlng").value;
+        var latlngStr = input.split(",", 2);
+        var lat = parseFloat(latlngStr[0]);
+        var lng = parseFloat(latlngStr[1]);
+        var latlng = new google.maps.LatLng(lat, lng);
+        geocoder.geocode({ 'latLng': latlng }, function (results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                if (results[1]) {
+
+                    // set to txtStartMarker
+                    var start = $("#txtStartMarker").val();
+                    var end = $("#txtEndMarker").val();
+
+                    if (start.length == 0) {
+                        $("#txtStartMarker").val(results[1].formatted_address);
+                    } else if (start.length >= 0 && end.length == 0) {
+                        $("#txtEndMarker").val(results[1].formatted_address);
+                    } else if (start.length > 0 && end.length > 0) {
+                        $("#txtStartMarker").val(results[1].formatted_address);
+                        $("#txtEndMarker").val("");
+                    }
+
+
+                    /*
+                            
+                        //map.setZoom(11);
+                        marker = new google.maps.Marker({
+                        position: latlng,
+                        map: map
+                        });
+                        infowindow.setContent(results[1].formatted_address);
+                        infowindow.open(map, marker);
+        
+                        currentMarker = marker;
+        
+                        */
+
+                } else {
+                    //alert("No results found");
+                }
+            } else {
+                //alert("Geocoder failed due to: " + status);
+            }
+        });
+    }
+
+    function viewMarker(marker, item) {
+        var displayContent = "<div class='title'>" + item.Name + "</div>";
+        displayContent += "<div>ĐỊA CHỈ: " + item.Address + "</div>";
+        displayContent += "<div>ĐIỆN THOẠI: " + item.Phone + "</div>";
+        displayContent += "<div>WEBSITE: " + item.Website + "</div>";
+        
+
+        var getPictureUrl = "@Url.Content("~/")" + "Home/GetPictures?markerId=" + item.Id;
+        $.getJSON(getPictureUrl, null, function (pdata) {
+            $.each(pdata, function (pindex, pitem) {
+                displayContent += "<a rel='" + item.Id + "' class='various fancybox.image' title='" + pitem.Text + "' href='" + "@Url.Content("~/")" + pitem.Url + "'><img src='" + "@Url.Content("~/")" + pitem.Url + "' style='margin:2px; height: 48px; width:48px' /></a>";
+            });
+
+            displayContent += "<div><a class='various fancybox.iframe' href='@Url.Action("CreateMarkerComment", "Home")?markerID=" + item.Id + "'>Comment</a> <a id='btnCreateMarkerLike' href='#' onclick='CreateMarkerLike(\"" + item.Id + "\"); return false'>Like</a></div>";
+            infowindow.setContent(displayContent);
+            infowindow.open(map, marker);
+        });
+    }
+
+    // Tìm đường đi
+    function calcRoute() {
+        var start = document.getElementById("txtStartMarker").value;
+        var end = document.getElementById("txtEndMarker").value;
+        var request = {
+            origin: start,
+            destination: end,
+            travelMode: google.maps.DirectionsTravelMode.WALKING
+        };
+        directionsService.route(request, function (response, status) {
+            if (status == google.maps.DirectionsStatus.OK) {
+                directionsDisplay.setDirections(response);
+            }
+        });
+    }
+
+    function initialize() {
+        // Init geocoder
+        geocoder = new google.maps.Geocoder();
+        // Init direction
+        this.directionsDisplay = new google.maps.DirectionsRenderer();
+
+        var myOptions = {
+            zoom: 16,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+        directionsDisplay.setMap(map);
+
+        // Layers
+        // Mặc định là trung tâm thành phố Đà Nẵng
+        var mypos = new google.maps.LatLng(16.056752403219743, 108.23274833874507);
+        @{
+            if (Request.QueryString["city"] == "hanoi")
+            {
+                @: mypos = new google.maps.LatLng(21.02349273785507, 105.84096989987643);
+            }
+            else if (Request.QueryString["city"] == "hcm")
+            {
+                @: mypos = new google.maps.LatLng(10.772903187108438, 106.69751481634535);
+            }
+        }
+        map.setCenter(mypos);
+
+        if ("@User.Identity.Name" == "admin") {
+            // Add events.
+            window.google.maps.event.addListener(map, "click", function(event) {
+                addMarker(event.latLng);
+            });
+        } else {
+            // Add events để tìm kiếm đường đi.
+            google.maps.event.addListener(map, "click", function(event) {
+                //alert(event.latLng);
+                $("#latlng").val(event.latLng);
+
+                var input = $("#latlng").val();
+
+                input = input.replace('(', '');
+                input = input.replace(')', '');
+                $("#latlng").val(input);
+
+                codeLatLng();
+            });
+            
+        }
+
+        // Load markers.
+        // Nạp các marker lên map
+        var now = new Date();
+        // Alway refesh page (Avoid page cached).
+        var url = "@Url.Content("~/")" + "Home/GetAllMarkers/?time=" + now.getTime();
+
+        var categoryid = '@Request.QueryString["CategoryID"]';
+        if (categoryid.length > 0) {
+            url = "@Url.Content("~/")" + 'Home/GetAllMarkers/?CategoryID=@Request.QueryString["CategoryID"]&time=' + now.getTime();
+        }
+
+        
+
+        $.getJSON(url, null, function (data) {
+            // JSON: All Makers
+            console.log(data);
+
+            $.each(data, function (index, item) {
+
+                var image = new google.maps.MarkerImage(
+                    "@Url.Content("~/")" + "images/icons/default.png",
+                    new google.maps.Size(32, 37),
+                    new google.maps.Point(0, 0),
+                    new google.maps.Point(16, 37)
+                );
+
+
+                var shadow = new google.maps.MarkerImage(
+                    "@Url.Content("~/")" + "images/icons/shadow.png",
+                    new google.maps.Size(54, 37),
+                    new google.maps.Point(0, 0),
+                    new google.maps.Point(16, 37)
+                );
+
+
+                if (item.SubCategoryIconType != "Default") {
+                    image.url = "@Url.Content("~/")" + "images/icons/" + item.CategoryIconType + "/" + item.SubCategoryIconType + ".png";
+                } else {
+                    image = null;
+                    shadow = null;
+                }
+
+                var latlng = new google.maps.LatLng(item.Latitude, item.Longitude);
+                var marker = new google.maps.Marker({
+                    position: latlng,
+                    map: map,
+                    icon: image,
+                    shadow: shadow,
+                    draggable: false,
+                    title: item.Id
+                });
+
+                // Add click event.
+
+                google.maps.event.addListener(marker, "click", function (event) {
+                    viewMarker(marker, item);
+                });
+
+                /*
+    
+                    // Add dragstart event.
+                    google.maps.event.addListener(marker, "dragstart", function (event) {
+                    //infowindow.open(map, marker);
+                    this.currentMarker = marker;
+                    });
+    
+                    // Add dragend event.
+                    google.maps.event.addListener(marker, "dragend", function (event) {
+                    var newLocation = marker.getPosition();
+                    // Display infomation on left menu.
+                    $("#txtLatitude").val(newLocation.lat());
+                    $("#txtLongitude").val(newLocation.lng());
+    
+                    $.ajax({
+                    url: "Home/UpdateMarker",
+                    type: "POST",
+                    data: { markerId: marker.getTitle(), latitude: newLocation.lat(), longitude: newLocation.lng() },
+                    success: function (returnData) {
+                    //alert(returnData.Message);
+                    }
+                    });
+    
+                    });
+                    */
+                markers.push(marker);
+            });
+        });
+    }
+
+    // Create a marker
+    function addMarker(location) {
+
+        var marker = new google.maps.Marker({
+            position: location,
+            map: map,
+            draggable: true
+        });
+
+        //// Display infomation on left menu.
+        //$("#txtLatitude").val(location.lat());
+        //$("#txtLongitude").val(location.lng());
+
+        this.currentMarker = marker;
+
+        $("#linkAddMarker").attr("href", "@Url.Content("~/Marker/AddMarker?latitude=")" + location.lat() + '&longitude=' + location.lng());
+        $("#linkAddMarker").trigger("click");
+
+        //// Add click event.
+        //google.maps.event.addListener(marker, "click", function (event) {
+        //    infowindow.open(map, marker);
+        //});
+    }
+
+
+</script>
+<a style="display: block" id="linkAddMarker" class="various fancybox.iframe" href="@Url.Content("~/Marker/AddMarker")">Add Marker</a>
+
+<script type="text/javascript">
+    // on page load
+    $(document).ready(function () {
+        var h = $(window).height();
+        var mapDiv = $("#map_canvas");
+        var leftmenuDiv = $("#leftmenu");
+
+        $("#mainContainer").splitter("resize", 100);
+
+        leftmenuDiv.css("width", "180px");
+        
+        mapDiv.css("left", "180px");
+
+        $("#mainContainer").css("height", (h - 60) + "px");
+        $("#mainContainer").trigger("resize");
+
+        // init highslide
+        // initDisplayPicture();
+    });
+
+
+
+    // Button Terran.
+    $("#btnSetMapTerrain").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+    });
+
+    $("#btnSetMapRoadmap").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+    });
+
+    $("#btnSetMapSatellite").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+    });
+
+    $("#btnSetMapHybrid").click(function () {
+        map.setMapTypeId(google.maps.MapTypeId.HYBRID);
+    });
+
+    $("#btnAdmin").click(function () {
+        window.location.href = "@Url.Content("~/Category")";
+
+    });
+
+
+
+
+    @* // DropDownList Categories.
+        $("#ddlCategory").change(function () {
+            // clear.
+            $('#ddlSubCategory > option').remove();
+            $('#ddlMarker > option').remove();
+
+            var guid = $(this).val();
+
+            $('#ddlSubCategory').append(new Option("[Chọn danh mục]", '@Guid.NewGuid()'));
+
+            $.getJSON("@Url.Content("~/")" + "Home/GetSubCategories/?categoryId=" + guid, null, function (data) {
+                $.each(data, function (index, item) {
+                    $('#ddlSubCategory').append(new Option(item.Name, item.Id));
+                });
+            });
+        });*@
+
+    @*// DropDownList SubCategories.
+        $("#ddlSubCategory").change(function () {
+            // clear.
+            $('#ddlMarker > option').remove();
+
+            var guid = $(this).val();
+
+            $('#ddlMarker').append(new Option("[Chọn danh mục]", '@Guid.NewGuid()'));
+
+            $.getJSON("@Url.Content("~/")" + "Home/GetMarkers/?subCategoryId=" + guid, null, function (data) {
+                $.each(data, function (index, item) {
+                    $('#ddlMarker').append(new Option(item.Name, item.Id));
+                });
+            });
+        });*@
+
+
+
+    // Autocomplete.
+               @* $("#txtSearchMarker").autocomplete({
+        source: "@Url.Content("~/")" +  "Home/GetAllMarkersForAutoComplete",
+        max: 10,
+        focus: function () {
+            // prevent value inserted on focus
+            return false;
+        },
+        select: function (event, ui) {
+            $("#txtSearchMarker").val(ui.item.label);
+            // goto marker
+            gotoMarker(ui.item.value);
+            return false;
+        },
+        open: function () {
+            $(this).autocomplete('widget').css('z-index', 10001);
+            return false;
+        }
+    });*@
+
+    
+
+    function getSubCategoryId() {
+        return {
+            SubCategoryId: $("#ddlSubCategory").val()
+        };
+    }
+
+    function getSearchValue() {
+        return {
+            SearchValue: $("#txtKendo").val()
+        };
+    }
+</script>
+
+
+<script type="text/javascript">
+
+
+
+
+    //function displayPicture(sender) {
+    //    window.hs.expand(sender, {
+    //        dimmingOpacity: 0.6,
+    //        align: 'center'
+    //    });
+    //    return false;
+    //}
+
+    //function initDisplayPicture() {
+    //    $('[action="displayPicture"]').each(function () {
+    //        $(this).click(function () {
+    //            var data = $(this).attr("data");
+    //            displayPicture(data);
+    //            return false;
+    //        });
+    //    });
+    //}
+
+    function CreateMarkerLike(markerId) {
+        $("#btnCreateMarkerLike").hide();
+        // Save data to database.
+        $.ajax({
+            url: "@Url.Content("~/")" + "Home/CreateMarkerLike",
+            type: "POST",
+            data: { markerId: markerId },
+            success: function (data) {
+                //alert(data.Message);                           
+            }
+        });
+    }
+</script>
+<div style="display: none">
+    <input id="btnSetMapTerrain" name="btnSetMapTerrain" class="k-button" value="Địa hình" type="button" />
+    <input id="btnSetMapRoadmap" name="btnSetMapRoadmap" class="k-button" value="Đường đi" type="button" />
+    <input id="btnSetMapSatellite" name="btnSetMapSatellite" class="k-button" value="Vệ tinh" type="button" />
+    <input id="btnSetMapHybrid" name="btnSetMapHybrid" class="k-button" value="Vệ tinh kết hợp" type="button" />
+    <input id="btnAdmin" name="btnAdmin" value="Quản trị dữ liệu" class="k-button" type="button" />
+</div>
+<div style="display: none">
+    <span>THÀNH PHỐ:
+                    <a style="color: white" href="/Home/Index">Đà Nẵng</a>
+        <a style="color: white" href="/Home/Index?city=hanoi">Hà Nội</a> <a style="color: white" href="/Home/Index?city=hcm">Hồ Chí Minh</a>
+    </span>
+</div>

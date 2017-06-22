@@ -1,0 +1,68 @@
+﻿@using Kendo.Mvc.UI
+@model IEnumerable<GoogleMap.Models.Marker>
+@{
+    ViewBag.Title = "Danh sách địa điểm";
+}
+
+<h2>@ViewBag.Title</h2>
+
+@*@Html.Kendo().Grid(Model).Name("kendoGrid").Columns(column =>
+                                                        {
+                                                            column.Bound(x => x.Name).Sortable(true);
+                                                            column.Bound(x => x.Latitude).Sortable(false);
+                                                            column.Bound(x => x.Longitude).Sortable(false);
+                                                            column.Bound(x => x.Address).Sortable(false);
+                                                        }).DataSource(s => s.Ajax().PageSize(20).ServerOperation(false).Read(read => read.Action("AjaxIndex", "Marker").Type(HttpVerbs.Post))).Pageable().Sortable().Filterable()*@
+<p>
+    @Html.ActionLink("Tạo mới", "Index", "Home")
+</p>
+
+<table style="width: 100%; border-collapse: separate">
+    <tr>
+        <th style="width: 50%">Tên địa diểm
+        </th>
+        <th>Latitude
+        </th>
+        <th>Longitude
+        </th>
+        <th>Loại danh mục
+        </th>
+        <th>Danh mục
+        </th>
+        <th style="width: 50%">Địa chỉ
+        </th>
+        <th></th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td style="white-space: nowrap">
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Latitude)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Longitude)
+            </td>
+            <td style="white-space: nowrap">
+                @Html.DisplayFor(modelItem => item.SubCategory.Category.Name)
+            </td>
+
+            <td style="white-space: nowrap">
+                @Html.DisplayFor(modelItem => item.SubCategory.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Address)
+            </td>
+            <td style="white-space: nowrap">
+                @Html.ActionLink("Sửa", "Edit", new { id = item.Id }) |
+                @Html.ActionLink("Chi tiết", "Details", new { id = item.Id }) |
+                @Html.ActionLink("Upload Hình", "UploadPicture", new { id = item.Id }) |
+                @Html.ActionLink("Xóa", "Delete", new { id = item.Id })
+            </td>
+        </tr>
+    }
+
+</table>

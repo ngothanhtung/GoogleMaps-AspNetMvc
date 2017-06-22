@@ -1,0 +1,102 @@
+﻿@using GoogleMap.Models
+@using Kendo.Mvc.UI
+
+@(Html.Kendo()
+            .PanelBar()
+            .Name("panelLayer")
+            .ExpandMode(PanelBarExpandMode.Single)
+            .SelectedIndex(0)
+            .BindTo(new GoogleMapEntities().Layers.OrderBy(x => x.Name), mappings =>
+            {
+                // Layer
+                mappings.For<Layer>(binding => binding.ItemDataBound((item, layer) =>
+                    {
+                        item.Text = layer.Name; item.HtmlAttributes.Add("style", "font-weight: bold; text-transform: uppercase");
+                        //item.HtmlAttributes.Add("data", layer.Id);                        
+                    })
+                    .Children(layer => layer.Categories.ToList().OrderBy(x => x.Name)));
+                // Categories
+                mappings.For<Category>(binding => binding.ItemDataBound((item, category) =>
+                    {
+                        item.Text = "» " + category.Name;
+                        item.HtmlAttributes.Add("onclick", "display('" + category.Id + "')");
+
+                    })
+                    //    .Children(category => category.SubCategories.OrderBy(x => x.Name)));
+                    //// SubCategories
+                    //mappings.For<SubCategory>(binding => binding.ItemDataBound((item, subcategory) =>
+                    //    {
+                    //        item.Text = "- " + subcategory.Name; 
+                    //        item.HtmlAttributes.Add("style", "font-weight: normal; text-transform: none");
+                    //        item.HtmlAttributes.Add("data", subcategory.Id);                        
+
+                //    })
+                );
+            })
+        )
+
+
+<script type="text/javascript">
+    function display(value) {
+        // Load markers.
+        // Nạp các marker lên map
+        var now = new Date();
+        // Alway refesh page (Avoid page cached).
+        var url = '@Url.Content("~/")' + "Home/GetAllMarkers/?time=" + now.getTime();
+
+        var categoryid = value;
+        if (categoryid.length > 0) {
+            url = '@Url.Content("~/")' + 'Home/GetAllMarkers/?CategoryID=' + categoryid + '&time=' + now.getTime();
+        }
+
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+
+        markers.length = 0;
+
+        $.getJSON(url, null, function (data) {
+            $.each(data, function (index, item) {
+
+                var image = new google.maps.MarkerImage(
+                    '@Url.Content("~/")' + "images/icons/default.png",
+            new google.maps.Size(32, 37),
+            new google.maps.Point(0, 0),
+            new google.maps.Point(16, 37)
+        );
+
+
+            var shadow = new google.maps.MarkerImage(
+                '@Url.Content("~/")' + "images/icons/shadow.png",
+            new google.maps.Size(54, 37),
+            new google.maps.Point(0, 0),
+            new google.maps.Point(16, 37)
+        );
+
+
+            if (item.SubCategoryIconType != "Default") {
+                image.url = '@Url.Content("~/")' + "images/icons/" + item.CategoryIconType + "/" + item.SubCategoryIconType + ".png";
+            } else {
+                image = null;
+                shadow = null;
+            }
+
+            var latlng = new google.maps.LatLng(item.Latitude, item.Longitude);
+            var marker = new google.maps.Marker({
+                position: latlng,
+                map: map,
+                icon: image,
+                shadow: shadow,
+                draggable: false,
+                title: item.Id
+            });
+
+            // Add click event.
+            google.maps.event.addListener(marker, "click", function (event) {
+                viewMarker(marker, item);
+            });
+            markers.push(marker);
+        });
+    });
+}
+</script>

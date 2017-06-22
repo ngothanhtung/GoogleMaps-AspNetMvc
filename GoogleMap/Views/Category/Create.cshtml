@@ -1,0 +1,42 @@
+﻿@model GoogleMap.Models.Category
+@{
+    ViewBag.Title = "Tạo mới loại danh mục";
+}
+
+<h2>@ViewBag.Title</h2>
+
+<script src="@Url.Content("~/Scripts/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/jquery.validate.unobtrusive.min.js")" type="text/javascript"></script>
+
+@using (Html.BeginForm())
+{
+    @Html.ValidationSummary(true)
+    <fieldset>
+        <legend>Thông tin loại danh mục</legend>
+
+        <div class="editor-label">
+            Tên danh mục
+        </div>
+        <div class="editor-field">
+            <input style="width: 300px;" data-val="true" data-val-length="Tên danh mục không được vượt quá 128 ký tự." data-val-length-max="128" data-val-required="Chưa nhập tên danh mục" id="Name" name="Name" type="text" value="" />
+            @*@Html.EditorFor(model => model.Name)*@
+            @Html.ValidationMessageFor(model => model.Name)
+        </div>
+
+        <div class="editor-label">
+            Loại biểu tượng
+        </div>
+        <div class="editor-field">
+            @Html.DropDownList("CategoryIconType")
+            @Html.ValidationMessageFor(model => model.CategoryIconType)
+        </div>
+
+        <p>
+            <input type="submit" value="Lưu thông tin" />
+        </p>
+    </fieldset>
+}
+
+<div>
+    [ @Html.ActionLink("Quay lại", "Index") ]
+</div>

@@ -1,0 +1,16 @@
+﻿<div style="white-space: nowrap">
+    @if (Request.IsAuthenticated)
+    {
+        
+        <text>Xin chào <strong>@User.Identity.Name</strong>! [ @Html.ActionLink("Thoát", "LogOff", "Account") ]</text>
+        if (User.IsInRole("admin"))
+        {
+            <text>[ @Html.ActionLink("Quản trị", "Index", "Category") ]</text>
+        }
+    }
+    else
+    {
+        @:[ @Html.ActionLink("Đăng nhập", "LogOn", "Account") ]
+        @:[ @Html.ActionLink("Đăng ký", "Register", "Account") ]
+    }
+</div>

@@ -1,0 +1,43 @@
+﻿@model IEnumerable<GoogleMap.Models.Picture>
+@{
+    Layout = "~/Views/Shared/_FullScreenLayout.cshtml";
+    ViewBag.Title = "ViewPictures";
+}
+@{
+    var index = 0;
+}
+@foreach (var picture in this.Model)
+{
+    if (index > 0)
+    {
+    <a class='fancybox' href='@(Url.Content("~/") + picture.ImageUrl)' rel='' title=''>
+        <img src='@(Url.Content("~/") + picture.ImageUrl)' style='margin: 2px; height: 48px; width: 48px' alt=""/>
+    </a>
+    }
+    else
+    {
+    <a class='fancybox' href='@(Url.Content("~/") + picture.ImageUrl)' rel='' title=''>
+        <img src='@(Url.Content("~/") + picture.ImageUrl)' style='margin: 2px;' alt=""/>
+    </a>  
+    }
+    index++;
+}
+
+<script type="text/javascript">
+    // fancybox
+
+    $(".fancybox").fancybox({
+        openEffect: 'fade',
+        closeEffect: 'fade',
+        helpers: {
+            thumbs: {
+                width: 120,
+                height: 90
+            },
+            title: { type: 'inside' }
+        },
+        overlay: {
+            showEarly: false
+        }
+    });
+</script>
